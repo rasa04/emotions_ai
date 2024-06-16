@@ -8,6 +8,9 @@ from model import predict_emotions
 from rich.console import Console
 from rich.table import Table
 
+
+REQUESTS_AMOUNT = 1000
+
 # Initialize rich console
 console = Console()
 
@@ -18,15 +21,15 @@ def generate_random_text(length=100):
 
 
 # Function to measure the response time and memory usage of the model
-def measure_response_time_and_memory(text: str):
+def measure_response_time_and_memory(request_text: str):
     process = psutil.Process()
-    start_time = time.time()
     initial_memory = process.memory_info().rss
-    predict_emotions(text)
-    response_time = time.time() - start_time
+    request_start_time = time.time()
+    predict_emotions(request_text)
+    response_handling_time = time.time() - request_start_time
     final_memory = process.memory_info().rss
-    memory_used = final_memory - initial_memory
-    return response_time, memory_used
+    memory_used_for_request = max(final_memory - initial_memory, 0)  # Ensure memory used is not negative
+    return response_handling_time, memory_used_for_request
 
 
 # Single-threaded load test
@@ -34,13 +37,14 @@ console.print("Running single-threaded load test...", style="bold blue")
 single_thread_response_times = []
 single_thread_memory_usages = []
 start_time = time.time()
-for _ in range(100):
+for _ in range(REQUESTS_AMOUNT):
     text = generate_random_text()  # Generate random text
     response_time, memory_used = measure_response_time_and_memory(text)
     single_thread_response_times.append(response_time)
     single_thread_memory_usages.append(memory_used)
 end_time = time.time()
 single_thread_duration = end_time - start_time
+console.print("Single-threaded load test completed.", style="bold green")
 
 # Multithreaded load test
 console.print("Running multi-threaded load test...", style="bold blue")
@@ -48,13 +52,21 @@ multi_thread_response_times = []
 multi_thread_memory_usages = []
 start_time = time.time()
 with ThreadPoolExecutor(max_workers=10) as executor:
-    futures = [executor.submit(measure_response_time_and_memory, generate_random_text()) for _ in range(100)]
-    for future in futures:
-        response_time, memory_used = future.result()
-        multi_thread_response_times.append(response_time)
-        multi_thread_memory_usages.append(memory_used)
+    for future in [
+        executor.submit(
+            measure_response_time_and_memory,
+            generate_random_text()
+        ) for _ in range(REQUESTS_AMOUNT)
+    ]:
+        try:
+            response_time, memory_used = future.result()
+            multi_thread_response_times.append(response_time)
+            multi_thread_memory_usages.append(memory_used)
+        except Exception as e:
+            console.print(f"Error: {e}", style="bold red")
 end_time = time.time()
 multi_thread_duration = end_time - start_time
+console.print("Multi-threaded load test completed.", style="bold green")
 
 
 # Print summary statistics
@@ -73,7 +85,7 @@ def print_summary(response_times, memory_usages, duration, label):
         table.add_row("Maximum Response Time (seconds)", f"{max(response_times):.4f}",
                       f"{max(response_times) * 1000:.2f} ms")
         table.add_row("Minimum Response Time (seconds)", f"{min(response_times):.4f}",
-                      f"{min(response_times) * 1000:.4f} ms")
+                      f"{min(response_times) * 1000:.2f} ms")
         table.add_row("Total Number of Requests", f"{len(response_times)}", "")
         table.add_row("Average Memory Usage (bytes)", f"{statistics.mean(memory_usages):.2f}",
                       f"{statistics.mean(memory_usages) / (1024 ** 2):.2f} MB")

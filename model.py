@@ -1,12 +1,17 @@
+from typing import List, Dict
+
 import torch
 import torch.nn.functional as F
-from transformers import BertTokenizer, BertForSequenceClassification
-from typing import List, Dict
 from pydantic import BaseModel
+from transformers import BertTokenizer, BertForSequenceClassification
 
 # Load the model and tokenizer
 model = BertForSequenceClassification.from_pretrained('./model')
 tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
+
+# Check if GPU is available and set the device
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model.to(device)
 
 # List of emotions used in the GoEmotions dataset
 emotions = [
@@ -17,8 +22,18 @@ emotions = [
 ]
 
 
+# Pydantic models for FastAPI
+class EmotionResponse(BaseModel):
+    emotion: str
+    probability: float
+
+
+class PredictionResponse(BaseModel):
+    top_emotions: List[EmotionResponse]
+
+
 def predict_emotions(text: str) -> List[Dict[str, float]]:
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(device)
     outputs = model(**inputs)
 
     # Get probabilities using softmax
@@ -35,13 +50,3 @@ def predict_emotions(text: str) -> List[Dict[str, float]]:
         })
 
     return top_emotions
-
-
-# Pydantic models for FastAPI
-class EmotionResponse(BaseModel):
-    emotion: str
-    probability: float
-
-
-class PredictionResponse(BaseModel):
-    top_emotions: List[EmotionResponse]

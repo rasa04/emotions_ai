@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Any
 
 import torch
 import torch.nn.functional as F
@@ -32,7 +32,12 @@ class PredictionResponse(BaseModel):
     top_emotions: List[EmotionResponse]
 
 
-def predict_emotions(text: str) -> List[Dict[str, float]]:
+def count_tokens(text: str):
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    return len(inputs['input_ids'][0])
+
+
+def predict_emotions(text: str) -> tuple[list[dict[str, str | list[str | Any] | Any]], int, Any]:
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(device)
     outputs = model(**inputs)
 
@@ -49,4 +54,4 @@ def predict_emotions(text: str) -> List[Dict[str, float]]:
             'probability': prob.item()
         })
 
-    return top_emotions
+    return top_emotions, count_tokens(text), outputs.logits.size(1)

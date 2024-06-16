@@ -26,12 +26,13 @@ async def predict_emotions_async(text: str):
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(request: TextRequest):
+    result = await predict_emotions_async(request.text)
     return PredictionResponse(
         top_emotions=[
             EmotionResponse(
-                emotion=emotion['emotion'],
-                probability=emotion['probability']
-            ) for emotion in await predict_emotions_async(request.text)
+                emotion=data['emotion'],
+                probability=data['probability']
+            ) for data in result[0]
         ]
     )
 

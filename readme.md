@@ -30,6 +30,16 @@ uvicorn app:app --host 0.0.0.0 --port 5000
 ```
 
 
+Пример запроса в сервер нейронки
+```bash
+curl --location 'http://127.0.0.1:5000/predict' \
+--header 'Content-Type: application/json' \
+--data '{
+    "text": "Today is an incredible day! Thank you for the excellent service."
+}'
+```
+
+
 Тест на качества ответов
 ```bash
 (ve) $ python ./test_answer_quality.py

@@ -22,6 +22,7 @@ $ ./ve/Scripts/activate
 Тренировать модель
 ```bash
 (ve) $ python ./train_model.py
+(ve) $ python ./train_model.py --checkpoint ./results/checkpoint-31500
 ```
 
 Запуск сервера

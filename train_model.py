@@ -1,4 +1,5 @@
 import os
+import argparse
 from transformers import BertForSequenceClassification, Trainer, TrainingArguments
 from datasets import load_from_disk
 import torch
@@ -27,10 +28,23 @@ if not check_labels(train_dataset) or not check_labels(test_dataset):
     print("Dataset contains invalid labels. Exiting...")
     exit()
 
-model = BertForSequenceClassification.from_pretrained(
-    'bert-base-multilingual-cased',
-    num_labels=28
-)
+
+# Обработка аргументов командной строки
+parser = argparse.ArgumentParser(description="Train BERT model")
+parser.add_argument('--checkpoint', type=str, help="Path to checkpoint directory")
+args = parser.parse_args()
+
+
+if args.checkpoint:
+    print(f"Loading model from checkpoint: {args.checkpoint}")
+    model = BertForSequenceClassification.from_pretrained(args.checkpoint)
+else:
+    print("Training model from scratch")
+    model = BertForSequenceClassification.from_pretrained(
+        'bert-base-multilingual-cased',
+        num_labels=28
+    )
+
 model.to(device)
 
 training_args = TrainingArguments(
@@ -39,7 +53,7 @@ training_args = TrainingArguments(
     learning_rate=2e-5,
     per_device_train_batch_size=16,
     per_device_eval_batch_size=16,
-    num_train_epochs=3,
+    num_train_epochs=4,
     weight_decay=0.01,
     logging_dir='./logs',  # directory for storing logs
     logging_steps=10,
@@ -52,7 +66,12 @@ trainer = Trainer(
     eval_dataset=test_dataset,
 )
 
-trainer.train()
+# Продолжить обучение, если указан чекпоинт
+if args.checkpoint:
+    trainer.train(resume_from_checkpoint=args.checkpoint)
+else:
+    trainer.train()
+
 
 model.save_pretrained('./model')
 print("Модель успешно дообучена и сохранена")

@@ -1,13 +1,14 @@
-import time
-import statistics
 import random
-import string
-import psutil
+import statistics
+import time
 from concurrent.futures import ThreadPoolExecutor
-from model import predict_emotions
+
+import psutil
+from pynvml import *
 from rich.console import Console
 from rich.table import Table
-from pynvml import *
+
+from model import predict_emotions
 
 # Initialize NVML for GPU monitoring
 nvmlInit()
@@ -29,11 +30,13 @@ def measure_response_time_and_memory(request_text: str):
     process = psutil.Process()
     initial_memory = process.memory_info().rss
     request_start_time = time.time()
-    _, input_tokens, output_tokens = predict_emotions(request_text)
-    response_handling_time = time.time() - request_start_time
-    final_memory = process.memory_info().rss
-    memory_used_for_request = max(final_memory - initial_memory, 0)  # Ensure memory used is not negative
-    return response_handling_time, memory_used_for_request, input_tokens, output_tokens
+    _, handled_input_tokens, handled_output_tokens = predict_emotions(request_text)
+    return (
+        time.time() - request_start_time,
+        max(process.memory_info().rss - initial_memory, 0),  # Ensure memory used is not negative
+        handled_input_tokens,
+        handled_output_tokens
+    )
 
 
 # Function to get CPU and GPU usage

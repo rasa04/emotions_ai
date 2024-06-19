@@ -12,8 +12,8 @@ python -m venv ./ve
 $ ./ve/Scripts/activate # для Windows
 $ source ve/bin/activate # для Ubuntu
 
-(ve) $ pip install torch==2.3.1+cu118 /
-  torchaudio==2.3.1+cu118 /
+(ve) $ pip install torch==2.3.1+cu118 \
+  torchaudio==2.3.1+cu118 \
   torchvision==0.18.1+cu118 -f https://download.pytorch.org/whl/cu118/torch_stable.html
 
 (ve) $ pip install -r requirements.txt
